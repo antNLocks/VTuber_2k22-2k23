@@ -66,7 +66,7 @@ class Twitch_stream_bot:
         if 'tags' in df.columns:
             tags_filter = df.tags.map(lambda x: type(x) == list and 'VTUBER' in map(str.upper, x))
 
-        filter = map(or_, tag_ids_filter, tags_filter)
+        filter = list(map(or_, tag_ids_filter, tags_filter))
         return df[filter]
         
         
