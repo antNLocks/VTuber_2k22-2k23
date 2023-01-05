@@ -7,6 +7,7 @@ import loopleSheet as ls
 import subprocess
 from queue import Queue
 import json
+from operator import or_
 
 
 class Twitch_stream_bot:
@@ -42,6 +43,33 @@ class Twitch_stream_bot:
 
         self.nb_executions = 0
 
+    def _filterVtuberStream(self, df):
+        """
+        Filter a DataFrame based on the presence of the Vtuber tag identifier or the word Vtuber in the tag list.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            The source data
+
+        Return
+        ------
+        df_filtered : pandas.DataFrame
+            A new DataFrame with just the matching rows
+        """
+        tag_ids_filter = [False]*df.shape[0]
+        tags_filter = [False]*df.shape[0]
+
+        if 'tag_ids' in df.columns:
+            tag_ids_filter = df.tag_ids.map(lambda x: type(x) == list and self.vtuber_tag_id in x)
+
+        if 'tags' in df.columns:
+            tags_filter = df.tags.map(lambda x: type(x) == list and 'VTUBER' in map(str.upper, x))
+
+        filter = map(or_, tag_ids_filter, tags_filter)
+        return df[filter]
+        
+        
 
     def _getFrenchVtuberStreams(self):
         """
@@ -59,7 +87,7 @@ class Twitch_stream_bot:
         """
         response = requests.get(self.url, headers=self.headers)
         df_response = pd.DataFrame(response.json()['data'])
-        vtuber_streams = df_response[df_response.tag_ids.map(lambda x: type(x) == list and self.vtuber_tag_id in x)]
+        vtuber_streams = self._filterVtuberStream(df_response)
 
         nb_pages = 1
 
@@ -68,10 +96,7 @@ class Twitch_stream_bot:
             response = requests.get(self.url + '&after=' + response.json()['pagination']['cursor'], headers=self.headers)
             df_response = pd.DataFrame(response.json()['data'])
             
-            if 'tag_ids' in df_response.columns:
-                df_filtered = df_response[df_response.tag_ids.map(lambda x: type(x) == list and self.vtuber_tag_id in x)]
-            else:
-                df_filtered = pd.DataFrame()
+            df_filtered = self._filterVtuberStream(df_response)
                 
             vtuber_streams = pd.concat([vtuber_streams, df_filtered], ignore_index=True)
             nb_pages += 1
