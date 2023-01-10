@@ -31,7 +31,7 @@ class Twitch_stream_bot:
         self.url = 'https://api.twitch.tv/helix/streams?type=live&language=fr&first=100'
         self.headers = {'Authorization':'Bearer ' + TOKEN, 'Client-Id':CLIENT_ID}
 
-        self.csv_path = os.path.dirname(os.path.realpath(sys.argv[0])) + '/sync/data_twitch_vtuber_streams'
+        self.csv_path = os.path.dirname(os.path.realpath(sys.argv[0])) + '/sync/tagIds_tags/data_twitch_vtuber_streams'
 
         # For finding new streams and just ended streams
         # According to the Twitch API, some streams can be missed (because indexing changes over time)
@@ -109,7 +109,7 @@ class Twitch_stream_bot:
         """
         Subroutine provided to LoopleSheet and called automatically.
 
-        To know which streams are new and which are already known by `Twitch_stream_bot`, all the french streams with the VTuber tag (new or not) found by the last execution of *subroutine* are stored in the RAM.
+        To know which streams are new and which are already known by `Twitch_stream_bot`, all the french streams with a VTuber tag (new or not) found by the last execution of *subroutine* are stored in the RAM.
         Then comparing them with the streams found by the current execution of *subroutine* allows to point out the new streams and the streams which ended.
         Finally just the streams which ended are appended to the .csv file (enriched by the datetime of the end), thus forming a complete data set.
         """
@@ -130,7 +130,7 @@ class Twitch_stream_bot:
         # mostly that but not the same id_difference_vtuber_streams => this difference : | (last_last... + last...) - vtuber_streams |
         # new_vtuber_streams = vtuber_streams.merge(id_difference_vtuber_streams)
         
-        self.__saveEndedVtuber(ended_vtuber_streams)
+        self._saveEndedVtuber(ended_vtuber_streams)
 
         print(f'{datetime.now().strftime("%d/%m %H:%M:%S")} - {vtuber_streams.shape[0]} french vtuber streams extracted (over {nb_pages} paginations of french streams)')
         print(f'Change : - {ended_vtuber_streams.shape[0]} / + ?')
@@ -143,11 +143,11 @@ class Twitch_stream_bot:
         self.nb_executions += 1
 
 
-    def __saveEndedVtuber(self, ended_vtuber_streams):
+    def _saveEndedVtuber(self, ended_vtuber_streams):
         """
         Save dataframe to a .csv file. One .csv file for one day.
         """
-        path = self.csv_path + datetime.now().strftime("_%m-%d.csv")
+        path = self.csv_path + datetime.now().strftime("_%Y-%m-%d.csv")
 
         if os.path.exists(path):  
             ended_vtuber_streams.to_csv(path_or_buf=path, header=False, index=False, mode='a')
