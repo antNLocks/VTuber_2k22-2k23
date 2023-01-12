@@ -18,7 +18,7 @@ class Twitch_stream_bot:
     def __init__(self):
 
         # The .json with the CLIENT_ID and the TOKEN
-        with open('twitch_credentials.json', mode='r') as f:
+        with open('./../twitch_credentials.json', mode='r') as f:
             twitch_credentials = json.load(f)
 
             # Twitch API variables
@@ -138,7 +138,7 @@ class Twitch_stream_bot:
             
         if self.nb_executions % 30 == 0:
             loopleSheet.post(f'{vtuber_streams.shape[0]} french vtuber streams are live')
-            #subprocess.run('drive push --no-prompt sync > /dev/null', shell=True)
+            subprocess.run('drive push --no-prompt sync > /dev/null', shell=True)
 
         self.nb_executions += 1
 
