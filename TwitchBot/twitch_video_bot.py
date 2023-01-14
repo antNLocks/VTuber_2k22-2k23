@@ -10,7 +10,7 @@ import json
 
 class Twitch_video_bot:
     """
-    A class containing a subroutine which uses the Twitch API to fetch all videos published by a broacaster who has used a Vtuber tag.
+    A class containing a subroutine (called by LoopleSheet) which uses the Twitch API to fetch all videos published by a broacaster who has used a Vtuber tag.
     The videos are then stored locally in csv files and pushed on Google Drive.
     """
     def __init__(self):
@@ -59,16 +59,17 @@ class Twitch_video_bot:
             # While there are other pages to get
             while len(response.json()["pagination"]) > 0 :
                     response = requests.get(self.url + str(user_id) + "&after=" + response.json()["pagination"]["cursor"], headers=self.headers)
-                    df_response = pd.concat([df_response, pd.DataFrame(response.json()["data"])])
+                    df_new_response = pd.DataFrame(response.json()["data"])
 
-                    if 'stream_id' not in df_response.columns:
+                    if 'stream_id' not in df_new_response.columns and not df_new_response.empty:
                         print(f"stream_id not in columns of user {user_id} - 2")
                         return None
 
+                    df_response = pd.concat([df_response, df_new_response])
 
             # If we're there it's because we got all pages without any error.
             # We can say that the work whith this user is done
-            self.user_id_remaining.loc[self.user_id_remaining['user_id'] == user_id, 'videos_fetched'] = True
+            self.users_id_remaining.loc[self.users_id_remaining['user_id'] == user_id, 'videos_fetched'] = True
             
             return df_response                
 
@@ -77,9 +78,18 @@ class Twitch_video_bot:
             return None
 
     def _get_users_id(self):
+        """
+        Gather all the user_id of the broadcasters that have used a Vtuber tag at least once since Twitch_stream_bot.py is running.
+        Go through all the *scattered* csv and add the user_id found in each of them.
+        The idea is to go through the *scattered* csv and not directly through the *aggregated* csv so that memory usage doesn't explode too much over time.
+        
+        Return
+        ------
+        users_id : pandas.DataFrame
+            A DataFrame with a unique column *user_id* 
+        """
         scattered_csv_paths = [os.path.dirname(os.path.realpath(sys.argv[0])) + '/../Data/scattered/tagIds/']
         scattered_csv_paths += [os.path.dirname(os.path.realpath(sys.argv[0])) + '/../Data/scattered/tagIds_tags/']
-
         
         users_id = pd.DataFrame()
         
@@ -100,9 +110,7 @@ class Twitch_video_bot:
         We only have to fetch the videos once a day.
         It first checks if the work has already been done and waits until at least 5am.
 
-        Then we run the `processing` notebook to update the list of broadcasters and upload all the videos.
-
-
+        If the work needs to be done, we get all the broadcasters, we retrieve all theirs videos and upload them.
         """
         path = self.csv_path + 'data_twitch_videos' + datetime.now().strftime("_%Y-%m-%d.csv")
 
@@ -117,15 +125,15 @@ class Twitch_video_bot:
         users_id['videos_fetched'] = False
 
         all_videos = pd.DataFrame()
-        self.user_id_remaining = users_id
+        self.users_id_remaining = users_id
 
         # Retrieving videos with a redundancy system
 
-        while self.user_id_remaining.shape[0] > 0:
-            print(f'{datetime.now().strftime("%d/%m %H:%M:%S")} - {self.user_id_remaining.shape[0]} users remaining')
+        while self.users_id_remaining.shape[0] > 0:
+            print(f'{datetime.now().strftime("%d/%m %H:%M:%S")} - {self.users_id_remaining.shape[0]} users remaining')
             new_videos = users_id.groupby('user_id').apply(self._get_user_videos).reset_index(drop=True)
             all_videos = pd.concat([new_videos, all_videos])
-            self.user_id_remaining = self.user_id_remaining[self.user_id_remaining['videos_fetched'] == False]
+            self.users_id_remaining = self.users_id_remaining[self.users_id_remaining['videos_fetched'] == False]
 
 
         print(f'{datetime.now().strftime("%d/%m %H:%M:%S")} - {all_videos.shape[0]} videos fetched')    
@@ -134,7 +142,7 @@ class Twitch_video_bot:
         
         all_videos.to_csv(path_or_buf=path, header=True, index=False, mode='w')
 
-        subprocess.run(f'drive push --no-prompt {self.csv_path} > /dev/null', shell=True)
+        #subprocess.run(f'drive push --no-prompt {self.csv_path} > /dev/null', shell=True)
             
 
 
