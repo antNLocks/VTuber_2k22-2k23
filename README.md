@@ -13,6 +13,8 @@ But then, the Twitch API changed and now also provides all tags as a list of str
 With the new condition, we had many more streams. So much so (5 times more) that we couldn't mix the new streams with the old ones, as they seemed to answer a different question.
 We haven't yet looked at what fundamentally differentiates these streams.
 
+Thanks to these streams, we can have access to the broadcasters who have used a Vtuber tag. It can then be interesting to look at the content they publish in order to quantify their level of virtuality (e.g. % of streams with an avatar), their popularity,...
+
 ## Repo Architecture
 
 ### TwitchBot folder
